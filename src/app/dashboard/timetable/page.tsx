@@ -31,6 +31,7 @@ export default function TimetablePage() {
   // Tab State: 'schedule' | 'special_days'
   const [activeTab, setActiveTab] = useState<'schedule' | 'special_days'>('schedule');
   const [editMode, setEditMode] = useState(false);
+  const [selectedQuickAddSubjectId, setSelectedQuickAddSubjectId] = useState<string | 'eraser' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -127,12 +128,94 @@ export default function TimetablePage() {
   }, [supabase]);
 
   // Visual grid click handler
-  const handleCellClick = (day: number, hour: number) => {
+  const handleCellClick = async (day: number, hour: number) => {
     if (!editMode || subjects.length === 0) return;
 
     // Check if slot exists
     const formattedStartTime = `${hour.toString().padStart(2, '0')}:00:00`;
     const existing = slots.find((s) => s.day_of_week === day && s.start_time === formattedStartTime);
+
+    // If Quick Add tool or Eraser is selected
+    if (selectedQuickAddSubjectId) {
+      if (selectedQuickAddSubjectId === 'eraser') {
+        if (existing) {
+          setActionLoading(true);
+          try {
+            const { error } = await supabase.from('timetable_slots').delete().eq('id', existing.id);
+            if (error) throw error;
+            setSlots(slots.filter((s) => s.id !== existing.id));
+            showToast('Slot deleted.');
+            router.refresh();
+          } catch (err: any) {
+            showToast(err.message || 'Failed to delete slot', 'error');
+          } finally {
+            setActionLoading(false);
+          }
+        }
+        return;
+      }
+
+      // Subject ID quick-add selected
+      setActionLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User session not found');
+        if (!activeSemester) throw new Error('No active semester');
+
+        const activeSub = subjects.find((s) => s.id === selectedQuickAddSubjectId);
+        const subLabel = activeSub ? activeSub.short_code : 'Subject';
+
+        if (existing) {
+          if (existing.subject_id === selectedQuickAddSubjectId) {
+            // Delete slot on second click (toggle eraser functionality)
+            const { error } = await supabase.from('timetable_slots').delete().eq('id', existing.id);
+            if (error) throw error;
+            setSlots(slots.filter((s) => s.id !== existing.id));
+            showToast(`Removed ${subLabel} slot.`);
+          } else {
+            // Swap subject
+            const { data, error } = await supabase
+              .from('timetable_slots')
+              .update({ subject_id: selectedQuickAddSubjectId })
+              .eq('id', existing.id)
+              .select()
+              .single();
+            if (error) throw error;
+            setSlots(slots.map((s) => (s.id === existing.id ? data : s)));
+            showToast(`Updated cell to ${subLabel}.`);
+          }
+        } else {
+          // Insert 1-hour slot
+          const startTimeStr = `${hour.toString().padStart(2, '0')}:00:00`;
+          const endTimeStr = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+
+          const { data, error } = await supabase
+            .from('timetable_slots')
+            .insert({
+              user_id: user.id,
+              semester_id: activeSemester.id,
+              subject_id: selectedQuickAddSubjectId,
+              day_of_week: day,
+              start_time: startTimeStr,
+              end_time: endTimeStr,
+              room: null,
+              faculty: null,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          setSlots([...slots, data]);
+          showToast(`Added ${subLabel} slot.`);
+        }
+        router.refresh();
+      } catch (err: any) {
+        showToast(err.message || 'Failed to update timetable', 'error');
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
 
     if (existing) {
       // Edit mode for existing slot
@@ -448,7 +531,12 @@ export default function TimetablePage() {
                   </span>
                 </div>
                 <button
-                  onClick={() => setEditMode(!editMode)}
+                  onClick={() => {
+                    if (editMode) {
+                      setSelectedQuickAddSubjectId(null);
+                    }
+                    setEditMode(!editMode);
+                  }}
                   className={`flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-md border transition-colors ${
                     editMode
                       ? 'bg-[#5B5BD6]/8 text-[#5B5BD6] border-[#5B5BD6]/20 font-medium'
@@ -458,6 +546,64 @@ export default function TimetablePage() {
                   {editMode ? 'Disable Editing' : 'Enable Editing'}
                 </button>
               </div>
+
+              {/* Quick Select Subject (if editMode is true) */}
+              {editMode && subjects.length > 0 && (
+                <div className="card bg-white p-4 space-y-3 border border-[#EBEBEB] rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-[#111111] uppercase tracking-wider">
+                      Quick Add & Erase Tool
+                    </span>
+                    {selectedQuickAddSubjectId && (
+                      <button
+                        onClick={() => setSelectedQuickAddSubjectId(null)}
+                        className="text-[10px] text-[#DC2626] font-medium hover:underline"
+                      >
+                        Clear Active Tool
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#6B6B6B]">
+                    Select a subject chip or the eraser tool below. Then simply click on any cell in the schedule grid to instantly insert, swap, or erase a class slot.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {subjects.map((sub) => {
+                      const isSelected = selectedQuickAddSubjectId === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setSelectedQuickAddSubjectId(isSelected ? null : sub.id)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'border-[#5B5BD6] bg-[#5B5BD6]/8 text-[#5B5BD6] ring-1 ring-[#5B5BD6]'
+                              : 'border-[#EBEBEB] bg-white text-[#6B6B6B] hover:text-[#111111] hover:bg-[#FAFAFA]'
+                          }`}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: sub.color }}
+                          />
+                          <span>{sub.name} ({sub.short_code})</span>
+                        </button>
+                      );
+                    })}
+                    {/* Eraser Tool Option */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQuickAddSubjectId(selectedQuickAddSubjectId === 'eraser' ? null : 'eraser')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                        selectedQuickAddSubjectId === 'eraser'
+                          ? 'border-[#DC2626] bg-[#DC2626]/8 text-[#DC2626] ring-1 ring-[#DC2626]'
+                          : 'border-[#EBEBEB] bg-white text-[#6B6B6B] hover:text-[#DC2626] hover:bg-[#DC2626]/5'
+                      }`}
+                    >
+                      <Trash2 size={13} className={selectedQuickAddSubjectId === 'eraser' ? 'text-[#DC2626]' : 'text-[#6B6B6B]'} />
+                      <span>Eraser Tool</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {subjects.length === 0 ? (
                 <div className="card text-center py-8">
