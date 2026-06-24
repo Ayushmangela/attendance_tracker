@@ -620,7 +620,7 @@ export default function TimetablePage() {
                 <div className="overflow-x-auto border border-[#EBEBEB] rounded-lg bg-white">
                   <div className="min-w-[650px] grid grid-cols-7 text-center divide-x divide-y divide-[#EBEBEB]">
                     {/* Headers */}
-                    <div className="bg-[#FAFAFA] py-2.5 text-xs font-medium text-[#6B6B6B] border-t-0 border-l-0">Time</div>
+                    <div className="sticky left-0 bg-[#FAFAFA] py-2.5 text-xs font-medium text-[#6B6B6B] border-t-0 border-l-0 z-10 border-r border-[#EBEBEB]">Time</div>
                     {DAYS.map((day) => (
                       <div key={day.val} className="bg-[#FAFAFA] py-2.5 text-xs font-medium text-[#6B6B6B] border-t-0">
                         {day.label}
@@ -633,7 +633,7 @@ export default function TimetablePage() {
                       return (
                         <div key={hour} className="contents">
                           {/* Left Time Label */}
-                          <div className="bg-[#FAFAFA] py-3 text-[11px] font-medium text-[#6B6B6B] flex items-center justify-center border-l-0">
+                          <div className="sticky left-0 bg-[#FAFAFA] py-3 text-[11px] font-medium text-[#6B6B6B] flex items-center justify-center border-l-0 z-10 border-r border-[#EBEBEB]">
                             {hourLabel}
                           </div>
                           {/* Day Column Cells */}
