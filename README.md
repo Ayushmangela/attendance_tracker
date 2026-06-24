@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AttendEase
 
-## Getting Started
+AttendEase is a clean, minimal college attendance calculator web app built with Next.js 14 (App Router), Tailwind CSS, TypeScript, and Supabase (for database storage and authentication).
 
-First, run the development server:
+---
 
+## Technical Stack
+- **Framework:** Next.js 14 (App Router)
+- **Styling:** Tailwind CSS (configured with clean, border-focused minimalist styles)
+- **Database & Auth:** Supabase (PostgreSQL with Row Level Security)
+- **Language:** TypeScript
+
+---
+
+## Local Development Setup
+
+### 1. Clone the repository and install dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
+Then, populate `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` with your credentials from the Supabase settings page under **Project Settings** -> **API**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Initialize the Database
+1. Go to your [Supabase Dashboard](https://supabase.com).
+2. Open the **SQL Editor** in your Supabase project.
+3. Paste the contents of `supabase/migrations/20260624000000_init.sql` into the query field and run the query.
+   - This creates the 6 required tables: `semesters`, `subjects`, `timetable_slots`, `special_days`, `extra_lectures`, and `attendance_records`.
+   - Enables Row Level Security (RLS) on all tables.
+   - Adds the required security policies where `user_id = auth.uid()`.
+   - Attaches triggers to keep `updated_at` columns updated automatically on modification.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Enable Email + Password Authentication
+1. In the Supabase Dashboard, navigate to **Authentication** -> **Providers**.
+2. Ensure that the **Email** provider is enabled.
+3. Set up redirect URLs under **Authentication** -> **URL Configuration**. Add `http://localhost:3000/**` to redirect users back locally after email verification signup confirmation.
 
-## Learn More
+### 5. Run the Local Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
+- `/supabase/migrations/` - SQL migration files for local and remote schema setups.
+- `/src/lib/types.ts` - TypeScript interfaces representing all PostgreSQL schema tables.
+- `/src/lib/supabase.ts` - Client wrappers for Browser (`createSupabaseBrowserClient`), Server Components (`createSupabaseServerClient`), and Middleware (`createSupabaseMiddlewareClient`).
+- `/src/middleware.ts` - Route middleware handling login redirects and protecting all dashboard paths under `/dashboard`.
+- `/src/app/(auth)/` - Auth layouts, sign-in (`/login`), and signup (`/register`) pages.
+- `/src/app/dashboard/today/` - Placeholder dashboard view to verify auth routing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Deployment Checklist (Vercel)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Commit and Push:**
+   Push your changes to your Git repository (GitHub, GitLab, or Bitbucket).
+2. **Deploy on Vercel:**
+   - Go to [vercel.com](https://vercel.com) and sign in.
+   - Click **Add New** -> **Project** and import your repository.
+   - In the **Environment Variables** section, add the variables from your `.env.local`:
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Click **Deploy**.
+3. **Configure Redirect URLs in Supabase:**
+   - Once your deployment completes, copy your Vercel deployment URL (e.g., `https://attendease-example.vercel.app`).
+   - In your Supabase Dashboard, go to **Authentication** -> **URL Configuration** -> **Redirect URLs**.
+   - Add your production URL with wildcard matching (e.g., `https://attendease-example.vercel.app/**`).

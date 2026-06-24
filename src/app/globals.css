@@ -3,25 +3,84 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #FAFAFA;
+  --foreground: #111111;
+  --surface: #FFFFFF;
+  --border: #EBEBEB;
+  --primary: #5B5BD6;
+  --primary-hover: #4A4ABF;
+  --success: #1A9E5F;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --text-primary: #111111;
+  --text-secondary: #6B6B6B;
+  --text-muted: #ABABAB;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background-color: var(--background);
+  font-family: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Custom helper classes based on the style guide */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: background-color 150ms ease;
+  border: 1px solid transparent;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--text-primary);
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+.btn-secondary:hover {
+  border-color: var(--text-primary);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.input-field {
+  width: 100%;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(91, 91, 214, 0.15);
+}
+
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
 }
